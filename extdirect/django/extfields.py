@@ -9,7 +9,6 @@ from django import forms
 #
 
 #'CommaSeparatedIntegerField'    : {'type':'string'}
-#'FileField'                     : {'type':'string'}
 #'FilePathField'                 : {'type':'string'}
 #'ImageField'                    : {'type':'string'}
 #'IPAddressField'                : {'type':'string'}
@@ -406,3 +405,6 @@ class ManyToManyField(ForeignKey):
 class ModelMultipleChoiceField(ModelChoiceField, ManyToManyField):
     pass
 
+
+class FileField(Field):
+    pass
