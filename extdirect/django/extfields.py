@@ -16,7 +16,6 @@ from django import forms
 #'PositiveIntegerField'          : {'type':'int'}
 #'PositiveSmallIntegerField'     : {'type':'int'}
 #'SmallIntegerField'             : {'type':'int'}
-#'TextField'                     : {'type':'string'}
 
 
 class Field(object):
@@ -176,6 +175,7 @@ class CharField(Field):
 
 ChoiceField = CharField
 SlugField = CharField
+TextField = CharField
 
 
 class MultipleChoiceField(ChoiceField):
