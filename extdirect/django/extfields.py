@@ -375,6 +375,8 @@ class ForeignKey(Field):
             relateds.append(cls.objects.get(pk=value))
         return relateds
 
+OneToOneField = ForeignKey
+
 class ModelChoiceField(ForeignKey):
 
     def getEditor(self, *args, **kwargs):
