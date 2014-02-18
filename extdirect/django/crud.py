@@ -3,8 +3,8 @@ from extdirect.django.store import ExtDirectStore
 from django.db import transaction
 from django.core.serializers import serialize
 from django.utils.encoding import force_unicode
-from django.views.generic.create_update import get_model_and_form_class
 from django.db.models import fields
+from django.forms.models import ModelFormMetaclass, ModelForm
 
 import extfields
 
@@ -54,7 +54,7 @@ class BaseExtDirectCRUD(object):
 
     def __init__(self):
         #same as Django generic views
-        self.model, self.form = get_model_and_form_class(self.model, self.form)
+        self.model, self.form = self.get_model_and_form_class(self.model, self.form)
 
         self.store = self.direct_store()
 
@@ -207,6 +207,31 @@ class BaseExtDirectCRUD(object):
 
     def failure(self, msg):
         return {self.store.success: False, self.store.root: [], self.store.total: 0, self.store.message: msg}
+
+    def get_model_and_form_class(self, model, form_class):
+        """
+        Returns a model and form class based on the model and form_class
+        parameters that were passed to the generic view.
+
+        If ``form_class`` is given then its associated model will be returned along
+        with ``form_class`` itself.  Otherwise, if ``model`` is given, ``model``
+        itself will be returned along with a ``ModelForm`` class created from
+        ``model``.
+        """
+        if form_class:
+            return form_class._meta.model, form_class
+        if model:
+            # The inner Meta class fails if model = model is used for some reason.
+            tmp_model = model
+            class Meta:
+                model = tmp_model
+            class_name = model.__name__ + 'Form'
+            form_class = ModelFormMetaclass(class_name, (ModelForm,), {'Meta': Meta})
+            return model, form_class
+        #raise GenericViewError("Generic view must be called with either a model or"
+        #                   " form_class argument.")
+        print("Generic view must be called with either a model or form_class argument.")
+        return model, form_class
 
 class ExtDirectCRUD(BaseExtDirectCRUD):
     """

@@ -1,11 +1,12 @@
 import sys, traceback
 
 from django.http import HttpResponse, HttpResponseBadRequest
-from django.utils import simplejson
 from django.conf import settings
 from django import forms
 
 from extserializer import jsonDumpStripped
+
+import json as json
 
 import extforms
 
@@ -31,7 +32,7 @@ class ExtDirectProvider(object):
     def _config(self):
         """
         Return the config object to add a new Ext.DirectProvider
-        It must allow to be dumped using simplejson.dumps
+        It must allow to be dumped using json.dumps
         """
         raise NotImplementedError
 
@@ -291,9 +292,9 @@ Ext.ns('%s');
                 type = request.POST['extType'],
                 isForm = True
             )
-        elif request.raw_post_data:
+        elif request.body:
 
-            extdirect_request = simplejson.loads(request.raw_post_data)
+            extdirect_request = json.loads(request.body)
 
         else:
             return HttpResponseBadRequest('Invalid request')
