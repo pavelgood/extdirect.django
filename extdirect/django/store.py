@@ -7,9 +7,9 @@ class ExtDirectStore(object):
     Implement the server-side needed to load an Ext.data.DirectStore
     """
     
-    def __init__(self, model, extras=[], root='records', total='total', \
-                 success='success', message='message', start='start', limit='limit', \
-                 sort='sort', dir='dir', metadata=False, colModel=False, id_property='id', \
+    def __init__(self, model, extras=[], root='records', total='total', success='success', \
+                 message='message', start='start', limit='limit', sort='sort', dir='direction',\
+                 sort_field='property', metadata=False, colModel=False, id_property='id', \
                  mappings={}, sort_info={}, custom_meta={}, fields = [], exclude_fields=[], \
                  extra_fields=[], get_metadata=None, get_metacolumns = None):
         
@@ -27,6 +27,7 @@ class ExtDirectStore(object):
         self.limit = limit
         self.sort = sort
         self.dir = dir
+        self.sort_field = sort_field
         self.fields = fields
         self.get_metadata = get_metadata
         self.extra_fields = extra_fields
@@ -70,15 +71,16 @@ class ExtDirectStore(object):
             start = kw.pop(self.start)
             limit = kw.pop(self.limit)
             paginate = True
-            
-        if kw.has_key(self.sort) and kw.has_key(self.dir):
+
+        sort_field = None
+        sort_dir   = 'DESC'
+
+        if kw.has_key(self.sort):
             sort = kw.pop(self.sort)
-            dir = kw.pop(self.dir)
-            order = True
-            
-            if dir == 'DESC':
-                sort = '-' + sort
-                
+            if len(sort) and sort[0].has_key(self.dir) and sort[0].has_key(self.sort_field):
+                sort_dir = sort[0].pop(self.dir)
+                sort_field = sort[0].pop(self.sort_field)
+
         if not qs is None:
             # Don't use queryset = qs or self.model.objects
             # because qs could be empty list (evaluate to False)
@@ -88,16 +90,12 @@ class ExtDirectStore(object):
             queryset = self.model.objects
             
         queryset = queryset.filter(**kw)
-        
-        #print 'FIELDS', fields
-        # if fields:
-            # queryset = queryset.values( *fields )
-            
-      #  print 'QS', queryset
-        if order:
-            queryset = queryset.order_by(sort)
-                
-        
+
+        if not sort_field is None:
+            if sort_dir == 'DESC':
+                sort_field = '-' + sort_field
+            queryset = queryset.order_by(sort_field)
+                 
         if not paginate or (limit==0):
             objects = queryset
             total = queryset.count()

@@ -292,6 +292,10 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
     #READ
     def read(self, request, fields = None):
         extdirect_data = self.extract_read_data(request)
+        
+        if extdirect_data.has_key('page'):
+            extdirect_data.pop('page')
+
         ok, msg = self.pre_read(extdirect_data)
         if ok:
             return self.store.query(qs=self.query(**extdirect_data), fields = fields, **extdirect_data)
