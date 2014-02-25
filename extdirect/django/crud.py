@@ -55,7 +55,6 @@ class BaseExtDirectCRUD(object):
     def __init__(self):
         #same as Django generic views
         self.model, self.form = self.get_model_and_form_class(self.model, self.form)
-
         self.store = self.direct_store()
 
     def register_actions(self, provider, action, login_required, permission):

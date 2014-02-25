@@ -1,6 +1,9 @@
 from django.core.serializers import serialize
 from django.core.paginator import Paginator, InvalidPage, EmptyPage
+from django.db.models import Q
+import operator
 from metadata import meta_fields, meta_columns
+
 
 class ExtDirectStore(object):
     """
@@ -9,9 +12,9 @@ class ExtDirectStore(object):
     
     def __init__(self, model, extras=[], root='records', total='total', success='success', \
                  message='message', start='start', limit='limit', sort='sort', dir='direction',\
-                 sort_field='property', metadata=False, colModel=False, id_property='id', \
+                 prop='property', id_property='id', filter='filter', colModel=False, metadata=False, \
                  mappings={}, sort_info={}, custom_meta={}, fields = [], exclude_fields=[], \
-                 extra_fields=[], get_metadata=None, get_metacolumns = None):
+                 extra_fields=[], get_metadata=None):
         
         self.model = model        
         self.root = root
@@ -27,12 +30,12 @@ class ExtDirectStore(object):
         self.limit = limit
         self.sort = sort
         self.dir = dir
-        self.sort_field = sort_field
+        self.property = prop # sort and filter fieldname
+        self.filter = filter
         self.fields = fields
         self.get_metadata = get_metadata
         self.extra_fields = extra_fields
         self.sort_info = sort_info
-        self.colModel = False
         self.custom_meta = custom_meta
         self.showmetadata = metadata
         self.metadata = {}
@@ -72,6 +75,18 @@ class ExtDirectStore(object):
             limit = kw.pop(self.limit)
             paginate = True
 
+        qfilters=[]
+        if kw.has_key(self.filter):
+            prefilters = []
+            items = kw.pop(self.filter)
+            if isinstance(items, list):
+                for item in items:
+                    prefilters.append( ( item.pop(self.property) + '__contains', item.pop('value') ) )
+            else:
+                prefilters.append( ( item.pop(self.property) + '__contains', item.pop('value') ) )
+
+            qfilters = [Q(x) for x in prefilters]
+
         sort_field = None
         sort_dir   = 'DESC'
 
@@ -89,7 +104,10 @@ class ExtDirectStore(object):
         else:
             queryset = self.model.objects
             
-        queryset = queryset.filter(**kw)
+        if len(qfilters):
+            queryset = queryset.filter(reduce(operator.or_, qfilters))
+        else:
+            queryset = queryset.filter()
 
         if not sort_field is None:
             if sort_dir == 'DESC':
