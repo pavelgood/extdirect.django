@@ -187,5 +187,5 @@ class ExtDirectStore(object):
                     #TODO: date field handle
                     continue
                 f.append({self.property: prop, 'value': template})
-            data.__setitem__(self.filter, f)
+            kw.__setitem__(self.filter, f)
         return kw
