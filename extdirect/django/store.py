@@ -1,6 +1,7 @@
 from django.core.serializers import serialize
 from django.core.paginator import Paginator, InvalidPage, EmptyPage
 from django.db.models import Q
+from django.db import models
 import operator
 from metadata import meta_fields, meta_columns
 
@@ -12,7 +13,7 @@ class ExtDirectStore(object):
     
     def __init__(self, model, extras=[], root='records', total='total', success='success', \
                  message='message', start='start', limit='limit', sort='sort', dir='direction',\
-                 prop='property', id_property='id', filter='filter', colModel=False, metadata=False, \
+                 prop='property', id_property='id', filter='filter', pquery='query', colModel=False, metadata=False, \
                  mappings={}, sort_info={}, custom_meta={}, fields = [], exclude_fields=[], \
                  extra_fields=[], get_metadata=None):
         
@@ -30,8 +31,9 @@ class ExtDirectStore(object):
         self.limit = limit
         self.sort = sort
         self.dir = dir
-        self.property = prop # sort and filter fieldname
+        self.property = prop
         self.filter = filter
+        self.pquery = pquery
         self.fields = fields
         self.get_metadata = get_metadata
         self.extra_fields = extra_fields
@@ -64,33 +66,26 @@ class ExtDirectStore(object):
                         # print 'mandatory', field
            
             self.metadata.update(self.custom_meta)  
-            
-            
-    def query(self, qs=None, metadata=True, colModel=False, fields = None, **kw):                
-        paginate = False
-        total = None
-        order = False
-        if kw.has_key(self.start) and kw.has_key(self.limit):
+
+    def query(self, qs=None, metadata=True, colModel=False, fields=None, **kw):
+        """
+        Filter objects and return serialized bundle.
+        """
+        paginate    = False
+        total       = None
+        sort_field  = None
+        sort_dir    = 'DESC'
+
+        kw = self.pquery_handler(kw)
+
+        kw, qfilters = self.filter_handler(kw)
+
+        if self.start in kw and self.limit in kw:
             start = kw.pop(self.start)
             limit = kw.pop(self.limit)
             paginate = True
 
-        qfilters=[]
-        if kw.has_key(self.filter):
-            prefilters = []
-            items = kw.pop(self.filter)
-            if isinstance(items, list):
-                for item in items:
-                    prefilters.append( ( item.pop(self.property) + '__contains', item.pop('value') ) )
-            else:
-                prefilters.append( ( item.pop(self.property) + '__contains', item.pop('value') ) )
-
-            qfilters = [Q(x) for x in prefilters]
-
-        sort_field = None
-        sort_dir   = 'DESC'
-
-        if kw.has_key(self.sort):
+        if self.sort in kw:
             sort = kw.pop(self.sort)
             if len(sort) and sort[0].has_key(self.dir) and sort[0].has_key(self.sort_field):
                 sort_dir = sort[0].pop(self.dir)
@@ -150,3 +145,47 @@ class ExtDirectStore(object):
                 res['columns'] =  meta_columns(self.model, fields = fields)
              
         return res
+
+    def filter_handler(self, kw):
+        """
+        Handles the `filter` key.
+        Creates and returns list of Q-filters if key `filter` exists.
+        See django QuerySet API docs.
+        """
+        qfilters = []
+
+        if self.filter in kw:
+            prefilters = [] # list of pairs (field name, field lookups)
+            items = kw.pop(self.filter)
+            if isinstance(items, list):
+                for item in items:
+                    prefilters.append((item.pop(self.property), item.pop('value')))
+            else:
+                prefilters.append((item.pop(self.property), item.pop('value')))
+
+            qfilters = [Q(x) for x in prefilters]
+
+        return kw, qfilters
+
+    def pquery_handler(self, kw):
+        """
+        Handles the `query` key.
+        """
+        if self.pquery in kw:
+            if self.limit in kw:
+                kw.pop(self.limit)
+            kw.__setitem__(self.start, 0)
+            template = kw.pop(self.pquery)
+            fields = self.model._meta.fields
+            f = []
+            for field in fields:
+                prop = field.name + '__icontains'
+                if isinstance(field, models.ForeignObject):
+                    #TODO: foreign key handle
+                    continue
+                if isinstance(field, models.DateField):
+                    #TODO: date field handle
+                    continue
+                f.append({self.property: prop, 'value': template})
+            data.__setitem__(self.filter, f)
+        return kw
