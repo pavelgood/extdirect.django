@@ -83,9 +83,10 @@ class ExtDirectStore(object):
 
         if self.sort in kw:
             sort = kw.pop(self.sort)
-            if len(sort) and sort[0].has_key(self.dir) and sort[0].has_key(self.sort_field):
+            if isinstance(sort, list) and isinstance(sort[0], dict) \
+                    and self.dir in sort[0] and self.property in sort[0]:
                 sort_dir = sort[0].pop(self.dir)
-                sort_field = sort[0].pop(self.sort_field)
+                sort_field = sort[0].pop(self.property)
 
         if not qs is None:
             # Don't use queryset = qs or self.model.objects

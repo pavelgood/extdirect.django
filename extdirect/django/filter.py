@@ -5,10 +5,11 @@ import sys
 from django.db.models import Q
 from django.db.models.query import QuerySet
 
+
 class QueryParser:
     """
     Mongodb like query parser.
-    Parses query from dict abd return Q-objects.
+    Parses query from dict and returns Q-objects.
     $lt, $gt, $lte, $gte syntax: { field: {$lt: value} }
     $and, $or syntax: { $and: [ { <expression1> }, { <expression2> } , ... , { <expressionN> } ] }
     $not syntax: { field: { $not: { <operator-expression> } } }
@@ -44,50 +45,57 @@ class QueryParser:
         self.model = model
 
     def parse(self, data):
-        result = ()
+        """
+        Deserialize json string to python object and parse it.
+        Return tuple with Q-objects
+        """
+        result = tuple()
         try:
             data = json.loads(data)
-            result = self.parse_item(data)
-        except:
-            err = sys.exc_info()[1]
-            print "Unexpected error: ", err
+            result = self._parse_item(data)
+        except ValueError:
+            print 'Value error: ', sys.exc_info()[1]
         return result
 
-    def parse_item(self, data):
+    def _parse_item(self, data):
         """
         Parse filter item: { element: expression }
+        Return tuple with Q-objects.
         """
         if not isinstance(data, dict):
-            return ()
+            return tuple()
         if not len(data):
-            return ()
+            return tuple()
         key = data.keys()[0]
         if key[0] == '$':
             if key in self.logical:
-                return self.parse_logical(key, data.pop(key))
+                return self._parse_logical(key, data.pop(key))
             else:
-                print('Unknown logical operator: %s' % key)
-                return ()
+                raise ValueError(errmsg("Unsupported logical operation %s" % key))
         else:
-            return self.parse_field(key, data[key])
+            return self._parse_field(key, data[key])
 
-    def parse_logical(self, key, data):
+    def _parse_logical(self, key, data):
         """
         Parse block with logical operation.
+        Return tuple with Q-objects.
         """
         if key == self._and:
             if not isinstance(data, list):
-                print('Not a list')
-                return ()
+                print("Not a list")
+                return tuple()
             qf = list()
             for item in data:
-                qf.append(self.parse_item(item))
-            ob = reduce(operator.and_, qf)
-            return ob
+                obj = self._parse_item(item)
+                if len(obj) > 0:
+                    qf.append(obj)
+            if len(qf) > 0:
+                return reduce(operator.and_, qf)
+            return tuple()
         elif key == self._or:
             if not isinstance(data, list):
-                print('Not a list')
-                return ()
+                print("Not a list")
+                return tuple()
             qf = list()
             for item in data:
                 obj = self.parse_item(item)
@@ -95,50 +103,29 @@ class QueryParser:
                     qf.append(obj)
             if len(qf) > 0:
                 return reduce(operator.or_, qf)
-            return ()
+            return tuple()
         elif key == self._not:
             # todo:
             pass
         else:
             pass
-            #raise
-        return ()
+        return tuple()
 
-    def parse_comparision(self, data):
+    def _parse_comparision(self, key, data):
         """
-        Return string operator and value.
+        Return string value.
         """
         if isinstance(data, list):
             pass
         return data
-        # elif key == self._lt:
-        #     return 'lt'
-        # elif key == self._gt:
-        #     pass
-        # elif key == self._lte:
-        #     pass
-        # elif key == self._gte:
-        #     pass
-        # elif key == self._in:
-        #     pass
-        # elif key == self._range:
-        #     pass
-        # elif key == self._contains:
-        #     pass
-        # elif key == self._icontains:
-        #     pass
-        # elif key == self._exact:
-        #     pass
-        # elif key == self._iexact:
-        #     pass
 
-    def parse_field(self, field, value):
+    def _parse_field(self, field, value):
         """
         Return Q-object.
         """
         if isinstance(value, dict):
             key = value.keys()[0]
-            value = self.parse_comparision(value[key])
-            return (Q((field + '__' + key[1:], value)))
+            value = self._parse_comparision(key, value[key])
+            return Q((field + '__' + key[1:], value))
         else:
-            return (Q((field + '__' + self._iexact[1:], value)))
+            return Q((field + '__' + self._iexact[1:], value))
