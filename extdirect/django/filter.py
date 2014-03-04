@@ -98,7 +98,7 @@ class QueryParser:
                 return tuple()
             qf = list()
             for item in data:
-                obj = self.parse_item(item)
+                obj = self._parse_item(item)
                 if len(obj) > 0:
                     qf.append(obj)
             if len(qf) > 0:
