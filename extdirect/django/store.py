@@ -1,21 +1,20 @@
 from django.core.serializers import serialize
 from django.core.paginator import Paginator, InvalidPage, EmptyPage
-from django.db.models import Q
 from django.db import models
-import operator
+from filter import QueryParser
+from django.db.models import Q
 from metadata import meta_fields, meta_columns
-
+import operator
 
 class ExtDirectStore(object):
     """
     Implement the server-side needed to load an Ext.data.DirectStore
     """
-    
     def __init__(self, model, extras=[], root='records', total='total', success='success', \
                  message='message', start='start', limit='limit', sort='sort', dir='direction',\
-                 prop='property', id_property='id', filter='filter', pquery='query', colModel=False, metadata=False, \
-                 mappings={}, sort_info={}, custom_meta={}, fields = [], exclude_fields=[], \
-                 extra_fields=[], get_metadata=None):
+                 prop='property', id_property='id', filter='filter', pquery='query', keyword = 'keyword', \
+                 colModel=False, metadata=False, mappings={}, sort_info={}, custom_meta={}, fields = [], \
+                 exclude_fields=[], extra_fields=[], get_metadata=None):
         
         self.model = model        
         self.root = root
@@ -34,6 +33,7 @@ class ExtDirectStore(object):
         self.property = prop
         self.filter = filter
         self.pquery = pquery
+        self.keyword = keyword
         self.fields = fields
         self.get_metadata = get_metadata
         self.extra_fields = extra_fields
@@ -42,6 +42,9 @@ class ExtDirectStore(object):
         self.showmetadata = metadata
         self.metadata = {}
         self.buildMetaData()
+        self.queryfilter = 'queryfilter'
+        self.value = 'value'
+        self.query_filter = QueryParser(self.model)
         
     def buildMetaData(self):
         self.metadata = {}
@@ -59,11 +62,6 @@ class ExtDirectStore(object):
             }
             if self.sort_info:
                 self.metadata.update({'sortInfo': self.sort_info})
-            
-            # if self.model.__name__ == 'User':
-                # for field in fields:
-                    # if not field['allowBlank']:
-                        # print 'mandatory', field
            
             self.metadata.update(self.custom_meta)  
 
@@ -75,8 +73,6 @@ class ExtDirectStore(object):
         total       = None
         sort_field  = None
         sort_dir    = 'DESC'
-
-        kw = self.pquery_handler(kw)
 
         kw, qfilters = self.filter_handler(kw)
 
@@ -98,9 +94,9 @@ class ExtDirectStore(object):
             queryset = qs
         else:
             queryset = self.model.objects
-            
+
         if len(qfilters):
-            queryset = queryset.filter(reduce(operator.or_, qfilters))
+            queryset = queryset.filter(qfilters)
         else:
             queryset = queryset.filter()
 
@@ -129,7 +125,7 @@ class ExtDirectStore(object):
     def serialize(self, queryset, metadata=True, colModel = False, total=None, fields = None):        
         meta = {
             'root': self.root,
-            'total' : self.total,
+            'total': self.total,
             'success': self.success,
             'idProperty': self.id_property
         }        
@@ -148,29 +144,26 @@ class ExtDirectStore(object):
 
     def filter_handler(self, kw):
         """
-        Handles the `filter` key.
-        Creates and returns list of Q-filters if key `filter` exists.
-        See django QuerySet API docs.
+        Handles the `filter` and 'query' keys.
         """
-        qfilters = []
+        if self.pquery in kw:
+            return self.query_handler(kw)
 
         if self.filter in kw:
-            prefilters = [] # list of pairs (field name, field lookups)
-            items = kw.pop(self.filter)
-            if isinstance(items, list):
-                for item in items:
-                    prefilters.append((item.pop(self.property), item.pop('value')))
-            else:
-                prefilters.append((item.pop(self.property), item.pop('value')))
+            f = kw.pop(self.filter)
+            if isinstance(f, list):
+                for item in f:
+                    if self.property in item and self.value in item and item[self.property] == self.queryfilter:
+                        return kw, self.query_filter.parse(item[self.value])
+            elif self.property in f and self.value in f and f[self.property] == self.queryfilter:
+                return kw, self.query_filter.parse(f[self.value])
+        return kw, ()
 
-            qfilters = [Q(x) for x in prefilters]
-
-        return kw, qfilters
-
-    def pquery_handler(self, kw):
+    def query_handler(self, kw):
         """
         Handles the `query` key.
         """
+        qf = ()
         if self.pquery in kw:
             if self.limit in kw:
                 kw.pop(self.limit)
@@ -179,13 +172,17 @@ class ExtDirectStore(object):
             fields = self.model._meta.fields
             f = []
             for field in fields:
-                prop = field.name + '__icontains'
-                if isinstance(field, models.ForeignObject):
+                keyword = field.name + '__icontains'
+                if field.name == 'id':
+                    continue
+                if isinstance(field, models.ForeignKey):
                     #TODO: foreign key handle
+                    print('ForeignKey field')
                     continue
                 if isinstance(field, models.DateField):
                     #TODO: date field handle
+                    print('DateField field')
                     continue
-                f.append({self.property: prop, 'value': template})
-            kw.__setitem__(self.filter, f)
-        return kw
+                f.append(Q((keyword, template)))
+            qf = reduce(operator.or_, f)
+        return kw, qf
