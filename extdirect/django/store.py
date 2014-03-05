@@ -70,7 +70,7 @@ class ExtDirectStore(object):
         """
         paginate    = False
         total       = None
-        sort_field  = None
+        sort_field  = 'id'
         sort_dir    = 'DESC'
 
         kw, qfilters = self.filter_handler(kw)

@@ -8,6 +8,7 @@ This is a fork from [awnion project][1].
 **Additions**:
 
  * Compatible with Django 1.6
+ * Add simple filter with logical operation support (AND, OR , NOT)
 
 **Todo**:
 
