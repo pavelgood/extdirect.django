@@ -3,7 +3,6 @@ import string
 import json
 import sys
 from django.db.models import Q
-from django.db.models.query import QuerySet
 
 
 class QueryParser:
@@ -47,9 +46,9 @@ class QueryParser:
     def parse(self, data):
         """
         Deserialize json string to python object and parse it.
-        Return tuple with Q-objects
+        Return Q-object.
         """
-        result = tuple()
+        result = Q()
         try:
             data = json.loads(data)
             result = self._parse_item(data)
@@ -60,12 +59,12 @@ class QueryParser:
     def _parse_item(self, data):
         """
         Parse filter item: { element: expression }
-        Return tuple with Q-objects.
+        Return Q-object.
         """
         if not isinstance(data, dict):
-            return tuple()
+            return Q()
         if not len(data):
-            return tuple()
+            return Q()
         key = data.keys()[0]
         if key[0] == '$':
             if key in self.logical:
@@ -78,12 +77,12 @@ class QueryParser:
     def _parse_logical(self, key, data):
         """
         Parse block with logical operation.
-        Return tuple with Q-objects.
+        Return Q-object.
         """
         if key == self._and:
             if not isinstance(data, list):
                 print("Not a list")
-                return tuple()
+                return Q()
             qf = list()
             for item in data:
                 obj = self._parse_item(item)
@@ -91,11 +90,11 @@ class QueryParser:
                     qf.append(obj)
             if len(qf) > 0:
                 return reduce(operator.and_, qf)
-            return tuple()
+            return Q()
         elif key == self._or:
             if not isinstance(data, list):
                 print("Not a list")
-                return tuple()
+                return Q()
             qf = list()
             for item in data:
                 obj = self._parse_item(item)
@@ -103,18 +102,20 @@ class QueryParser:
                     qf.append(obj)
             if len(qf) > 0:
                 return reduce(operator.or_, qf)
-            return tuple()
+            return Q()
         elif key == self._not:
-            # todo:
-            pass
+            obj = self._parse_item(data)
+            if len(obj) > 0:
+                return ~obj
         else:
             pass
-        return tuple()
+        return Q()
 
     def _parse_comparision(self, key, data):
         """
         Return string value.
         """
+        #todo: this
         if isinstance(data, list):
             pass
         return data

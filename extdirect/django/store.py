@@ -12,7 +12,7 @@ class ExtDirectStore(object):
     """
     def __init__(self, model, extras=[], root='records', total='total', success='success', \
                  message='message', start='start', limit='limit', sort='sort', dir='direction',\
-                 prop='property', id_property='id', filter='filter', pquery='query', keyword = 'keyword', \
+                 prop='property', id_property='id', filter='filter', pquery='query', \
                  colModel=False, metadata=False, mappings={}, sort_info={}, custom_meta={}, fields = [], \
                  exclude_fields=[], extra_fields=[], get_metadata=None):
         
@@ -33,7 +33,6 @@ class ExtDirectStore(object):
         self.property = prop
         self.filter = filter
         self.pquery = pquery
-        self.keyword = keyword
         self.fields = fields
         self.get_metadata = get_metadata
         self.extra_fields = extra_fields
@@ -160,6 +159,7 @@ class ExtDirectStore(object):
                 return kw, self.query_filter.parse(f[self.value])
         return kw, ()
 
+    #TODO: remove this method and 'query' key handler, use 'filter' key only
     def query_handler(self, kw):
         """
         Handles the `query` key.
@@ -177,12 +177,6 @@ class ExtDirectStore(object):
                 if field.name == 'id':
                     continue
                 if isinstance(field, models.ForeignKey):
-                    #TODO: foreign key handle
-                    print('ForeignKey field')
-                    continue
-                if isinstance(field, models.DateField):
-                    #TODO: date field handle
-                    print('DateField field')
                     continue
                 f.append(Q((keyword, template)))
             qf = reduce(operator.or_, f)
