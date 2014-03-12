@@ -3,16 +3,24 @@ import string
 import json
 import sys
 from django.db.models import Q
+from django.db.models.fields import FieldDoesNotExist
 
 
 class QueryParser:
     """
     Mongodb like query parser.
+    
     Parses query from dict and returns Q-objects.
     $lt, $gt, $lte, $gte syntax: { field: {$lt: value} }
     $and, $or syntax: { $and: [ { <expression1> }, { <expression2> } , ... , { <expressionN> } ] }
     $not syntax: { field: { $not: { <operator-expression> } } }
     foreign key fields syntax: fkfield1__fkfield2__......__fkfieldN__filterfield
+    
+    JSON structure:
+        filter: { property: "queryfilter", value: { <expression> } }
+    
+    Value example:
+        value: { $or: [ { $or:[ {}, {} ...] }, { $not: {} }, {} ] }
     """
     #comparision operators
     _gt = '$gt'
@@ -54,6 +62,8 @@ class QueryParser:
             result = self._parse_item(data)
         except ValueError:
             print 'Value error: ', sys.exc_info()[1]
+
+        #print result.__str__()
         return result
 
     def _parse_item(self, data):
@@ -111,22 +121,21 @@ class QueryParser:
             pass
         return Q()
 
-    def _parse_comparision(self, key, data):
+    def _parse_comparision(self, field, key, data):
         """
         Return string value.
         """
-        #todo: this
-        if isinstance(data, list):
-            pass
         return data
 
     def _parse_field(self, field, value):
         """
         Return Q-object.
+        field - field name
+        value - field value or expression
         """
         if isinstance(value, dict):
             key = value.keys()[0]
-            value = self._parse_comparision(key, value[key])
+            value = self._parse_comparision(field, key, value[key])
             return Q((field + '__' + key[1:], value))
         else:
             return Q((field + '__' + self._iexact[1:], value))

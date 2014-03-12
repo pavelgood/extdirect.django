@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '0.4.3'
+version = '0.4.4'
 
 setup(name='extdirect.django',
     version=version,
@@ -15,9 +15,9 @@ setup(name='extdirect.django',
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     keywords='',
-    author='Sergey Blinov',
-    author_email='blinovsv@gmail.com',
-    url='http://github.com/awnion/extdirect.django/tree/master',
+    author='',
+    author_email='',
+    url='http://github.com/pavelgood/extdirect.django/tree/master',
     license='BSD',
     namespace_packages=['extdirect'],
     packages=find_packages(exclude=['ez_setup']),

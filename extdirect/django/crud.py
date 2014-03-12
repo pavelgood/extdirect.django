@@ -52,10 +52,11 @@ class BaseExtDirectCRUD(object):
     direct_load_metadata = {'root': 'data', 'total' : 'total', 'success': 'success'}
 
 
-    def __init__(self):
+    def __init__(self, provider, action, model, form = None):
         #same as Django generic views
-        self.model, self.form = self.get_model_and_form_class(self.model, self.form)
+        self.model, self.form = self.get_model_and_form_class(model, form)
         self.store = self.direct_store()
+        self.register_actions(provider, action, False, None)
 
     def register_actions(self, provider, action, login_required, permission):
         #Register the CRUD actions. You may want to re-implement these methods
