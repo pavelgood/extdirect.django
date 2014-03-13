@@ -95,6 +95,12 @@ def meta_fields(model, mappings={}, exclude=[], get_metadata=None, fields = None
                         config['defaultValue'] =  configCls.getValue(field.default())
                     else:
                         config['defaultValue'] =  configCls.getValue(field.default )
+                        
+                if klass == 'ForeignKey':
+                    config_id = config.copy()
+                    config_id['name'] = config['name'] + '_id'
+                    config_id['type'] = 'int'
+                    result.append(config_id)
             else:                    
                 raise RuntimeError, \
                     "Field class `%s` not found in extfields.py. Use `get_metadata` to resolve the field `%s`." % (klass, field.name)
