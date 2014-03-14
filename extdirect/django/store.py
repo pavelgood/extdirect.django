@@ -120,9 +120,9 @@ class ExtDirectStore(object):
             
             objects = page.object_list
             
-        return self.serialize(objects, metadata, colModel, total, fields = fields)
+        return self.serialize(objects, metadata, colModel, total, fields=fields)
         
-    def serialize(self, queryset, metadata=True, colModel = False, total=None, fields = None):        
+    def serialize(self, queryset, metadata=True, colModel=False, total=None, fields=None):
         meta = {
             'root': self.root,
             'total': self.total,
@@ -138,7 +138,7 @@ class ExtDirectStore(object):
             res['metaData'] = self.metadata     
             # also include columns for grids
             if colModel:    
-                res['columns'] =  meta_columns(self.model, fields = fields)
+                res['columns'] = meta_columns(self.model, fields=fields)
              
         return res
 
@@ -153,11 +153,19 @@ class ExtDirectStore(object):
             f = kw.pop(self.filter)
             if isinstance(f, list):
                 for item in f:
-                    if self.property in item and self.value in item and item[self.property] == self.queryfilter:
-                        return kw, self.query_filter.parse(item[self.value])
-            elif self.property in f and self.value in f and f[self.property] == self.queryfilter:
-                return kw, self.query_filter.parse(f[self.value])
-        return kw, ()
+                    if self.property in item and self.value in item:
+                        if item[self.property] == self.queryfilter:
+                            return kw, self.query_filter.parse(item[self.value])
+                        else:
+                            prop = item[self.property]
+                            return kw, Q(prop=item[self.value])
+            elif self.property in f and self.value in f:
+                if f[self.property] == self.queryfilter:
+                    return kw, self.query_filter.parse(f[self.value])
+                else:
+                    prop = f[self.property]
+                    return kw, Q(prop, f[self.value])
+        return kw, Q()
 
     #TODO: remove this method and 'query' key handler, use 'filter' key only
     def query_handler(self, kw):
