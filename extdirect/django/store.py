@@ -158,13 +158,13 @@ class ExtDirectStore(object):
                             return kw, self.query_filter.parse(item[self.value])
                         else:
                             prop = item[self.property]
-                            return kw, Q(prop=item[self.value])
+                            return kw, Q((prop, item[self.value]))
             elif self.property in f and self.value in f:
                 if f[self.property] == self.queryfilter:
                     return kw, self.query_filter.parse(f[self.value])
                 else:
                     prop = f[self.property]
-                    return kw, Q(prop, f[self.value])
+                    return kw, Q((prop, f[self.value]))
         return kw, Q()
 
     #TODO: remove this method and 'query' key handler, use 'filter' key only
