@@ -244,7 +244,7 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
     """
 
     #CREATE
-    @transaction.commit_manually
+    @transaction.atomic
     def create(self, request):
         sid = transaction.savepoint()
 
@@ -287,7 +287,7 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
 
                 return self.failure(err)
         finally:
-            transaction.commit()
+            transaction.savepoint_commit(sid)
 
     #READ
     def read(self, request, fields = None):
@@ -319,9 +319,8 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
         else:
             return self.failure(msg)
 
-
     #UPDATE
-    @transaction.commit_manually
+    @transaction.atomic
     def update(self, request):
         sid = transaction.savepoint()
 
@@ -368,7 +367,7 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
 
                 return self.failure(err)
         finally:
-            transaction.commit()
+            transaction.savepoint_commit(sid)
 
     #DESTROY
     def destroy(self, request):
@@ -386,7 +385,6 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
         for c in cs:
             i = c.id
             c.delete()
-
             self.post_destroy(i)
 
         return {self.store.success: True,
