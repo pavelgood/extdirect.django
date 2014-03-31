@@ -100,6 +100,7 @@ def meta_fields(model, mappings={}, exclude=[], get_metadata=None, fields = None
                     config_id = config.copy()
                     config_id['name'] = config['name'] + '_id'
                     config_id['type'] = 'int'
+                    config_id['useNull'] = True
                     result.append(config_id)
             else:                    
                 raise RuntimeError, \
