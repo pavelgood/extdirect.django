@@ -64,6 +64,11 @@ class Serializer(python.Serializer):
                     strings_only=True)
             self._current[field.name + '_ids'] = [m2m_value(related)
                 for related in getattr(obj, field.name).iterator()]
+            values = []
+            for obj in getattr(obj, field.name).select_related():
+                values.append(obj.__unicode__())
+            self._current[field.name] = values
+
 
     def serialize(self, queryset, **options):
         '''
