@@ -102,6 +102,13 @@ def meta_fields(model, mappings={}, exclude=[], get_metadata=None, fields = None
                     config_id['type'] = 'int'
                     config_id['useNull'] = True
                     result.append(config_id)
+
+                if klass == 'ManyToManyField':
+                    config_id = config.copy()
+                    config_id['name'] = config['name'] + '_ids'
+                    config_id['type'] = 'auto'
+                    result.append(config_id)
+
             else:                    
                 raise RuntimeError, \
                     "Field class `%s` not found in extfields.py. Use `get_metadata` to resolve the field `%s`." % (klass, field.name)
