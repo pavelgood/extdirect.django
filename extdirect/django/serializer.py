@@ -62,13 +62,17 @@ class Serializer(python.Serializer):
             else:
                 m2m_value = lambda value: smart_unicode(value._get_pk_val(),
                     strings_only=True)
-            self._current[field.name + '_ids'] = [m2m_value(related)
-                for related in getattr(obj, field.name).iterator()]
-            values = []
-            for obj in getattr(obj, field.name).select_related():
-                values.append(obj.__unicode__())
-            self._current[field.name] = values
 
+            list_ids = []
+            list_val = []
+
+            for related in getattr(obj, field.name).iterator():
+                list_ids.append(m2m_value(related))
+                list_val.append(related.__unicode__())
+
+            self._current[field.name + '_ids'] = list_ids
+            self._current[field.name] = list_val
+             
 
     def serialize(self, queryset, **options):
         '''
