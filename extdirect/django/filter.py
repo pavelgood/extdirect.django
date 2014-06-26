@@ -80,7 +80,7 @@ class QueryParser:
             if key in self.logical:
                 return self._parse_logical(key, data.pop(key))
             else:
-                raise ValueError(errmsg("Unsupported logical operation %s" % key))
+                raise ValueError("Unsupported logical operation %s" % key)
         else:
             return self._parse_field(key, data[key])
 

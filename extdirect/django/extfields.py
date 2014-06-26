@@ -12,15 +12,18 @@ from django import forms
 #'FilePathField'                 : {'type':'string'}
 #'ImageField'                    : {'type':'string'}
 #'IPAddressField'                : {'type':'string'}
-#'NullBooleanField'              : {'type':'boolean'}
+#'NullBooleanField'              : {'type':'bool'}
 #'PositiveIntegerField'          : {'type':'int'}
 #'PositiveSmallIntegerField'     : {'type':'int'}
 #'SmallIntegerField'             : {'type':'int'}
+
+# TYPES: string, bool, int, float, date, array, auto
 
 
 class Field(object):
     WIDTH = 200
     COL_WIDTH = None
+    TYPE = ''
 
     def __init__(self, field):
         self.field = field  # django field
@@ -87,9 +90,10 @@ class Field(object):
 
     def getReaderConfig(self):
         conf = {
-                'name': self.getName()
-                ,'allowBlank': self.allowBlank()
-                }
+                'name': self.getName(),
+                'type': self.TYPE,
+                'allowBlank': self.allowBlank()
+        }
         return conf
 
     def getColumnConfig(self):
@@ -116,7 +120,8 @@ class Field(object):
 
 
 class AutoField(Field):
-    WIDTH=40
+    WIDTH = 40
+    TYPE = 'auto'
 
     def getEditor(self, *args, **kwargs):
         conf = super(AutoField, self).getEditor(*args, **kwargs)
@@ -130,7 +135,8 @@ class AutoField(Field):
 
 
 class EmailField(Field):
-    WIDTH=250
+    WIDTH = 250
+    TYPE = 'string'
 
     def getEditor(self, *args, **kwargs):
         conf = super(EmailField, self).getEditor(*args, **kwargs)
@@ -139,7 +145,8 @@ class EmailField(Field):
 
 
 class URLField(Field):
-    WIDTH=250
+    WIDTH = 250
+    TYPE = 'string'
 
     def getEditor(self, *args, **kwargs):
         conf = super(URLField, self).getEditor(*args, **kwargs)
@@ -148,7 +155,8 @@ class URLField(Field):
 
 
 class CharField(Field):
-
+    TYPE = 'string'
+    
     def getEditor(self, *args, **kwargs):
         conf = super(CharField, self).getEditor(*args, **kwargs)
         if getattr(self.field, 'choices', None):
@@ -177,9 +185,8 @@ ChoiceField = CharField
 SlugField = CharField
 TextField = CharField
 
-
 class MultipleChoiceField(ChoiceField):
-
+    
     def getEditor(self, *args, **kwargs):
         conf = super(MultipleChoiceField, self).getEditor(*args, **kwargs)
         conf['enableMultiSelect'] = True
@@ -188,7 +195,7 @@ class MultipleChoiceField(ChoiceField):
 
 
 class MultipleStringChoiceField(ChoiceField):
-
+    
     def getEditor(self, *args, **kwargs):
         conf = super(MultipleStringChoiceField, self).getEditor(*args, **kwargs)
         conf['enableMultiSelect'] = True
@@ -228,6 +235,7 @@ class IntegerField(DecimalField):
     FORMAT_RENDERER = '0'
     TYPE = 'int'
 
+PositiveIntegerField = IntegerField
 FloatField = DecimalField
 
 
@@ -239,6 +247,7 @@ class DateTimeField(Field):
     FORMAT_GET = '%Y-%m-%dT%H:%M:%S'
     WIDTH = 50
     COL_WIDTH = 50
+    TYPE = 'date'
 
     def getEditor(self, *args, **kwargs):
         conf = super(DateTimeField, self).getEditor(*args, **kwargs)
@@ -248,7 +257,6 @@ class DateTimeField(Field):
     def getReaderConfig(self):
         conf = super(DateTimeField, self).getReaderConfig()
         conf['dateFormat'] = self.FORMAT
-        conf['type'] = 'date'
         return conf
 
     def getColumnConfig(self):
@@ -303,6 +311,7 @@ class BooleanField(Field):
 
     WIDTH = 30
     COL_WIDTH = 30
+    TYPE = 'bool'
 
     def getEditor(self, *args, **kwargs):
         conf = super(BooleanField, self).getEditor(*args, **kwargs)
@@ -320,13 +329,13 @@ class BooleanField(Field):
 
     def getReaderConfig(self):
         conf = super(BooleanField, self).getReaderConfig()
-        conf['type'] = 'bool'
         return conf
 
 class ForeignKey(Field):
 
     MANYTOMANY = False
     RENDERER = 'Ext.django.FKRenderer'
+    TYPE = 'int'
 
     def getEditor(self, *args, **kwargs):
         conf = super(ForeignKey, self).getEditor(*args, **kwargs)
@@ -347,9 +356,12 @@ class ForeignKey(Field):
         return conf
 
     def getReaderConfig(self):
+        # generates tow config groups: with int type for ids and with string type for values
         conf = super(ForeignKey, self).getReaderConfig()
-        conf['defaultValue'] = ''
-        return conf
+        conf_id = conf.copy()
+        conf_id['name'] = conf.get('name') + '_id'
+        conf.update({'type': 'string'})
+        return [conf, conf_id]
 
     def parseValue(self, value):
         if value:
@@ -397,11 +409,22 @@ class ManyToManyField(ForeignKey):
 
     MANYTOMANY = True
     RENDERER = 'Ext.django.M2MRenderer'
+    TYPE = 'array'
 
     def parseValue(self, value):
         if value:
             value = self.parseFK(self.field.rel.to, value)
         return value
+
+    def getReaderConfig(self):
+        conf = {
+                'name': self.getName(),
+                'type': self.TYPE,
+                'allowBlank': self.allowBlank()
+        }
+        conf_id = conf.copy()
+        conf_id['name'] = conf.get('name') + '_ids'
+        return [conf, conf_id]
 
 
 class ModelMultipleChoiceField(ModelChoiceField, ManyToManyField):

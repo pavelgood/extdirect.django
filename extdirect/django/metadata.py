@@ -85,37 +85,35 @@ def meta_fields(model, mappings={}, exclude=[], get_metadata=None, fields = None
                 configCls = fieldCls(field)
                 config = configCls.getReaderConfig()
                 
-                if mappings.has_key(field.name):
-                
-                    config['mapping'] = unicode( field.name )
-                    config['name'] = unicode( mappings[field.name]  )
-
-                if field.has_default():
-                    if callable(field.default):
-                        config['defaultValue'] =  configCls.getValue(field.default())
-                    else:
-                        config['defaultValue'] =  configCls.getValue(field.default )
-                        
-                if klass == 'ForeignKey':
-                    config_id = config.copy()
-                    config_id['name'] = config['name'] + '_id'
-                    config_id['type'] = 'int'
-                    config_id['useNull'] = True
-                    result.append(config_id)
-
-                if klass == 'ManyToManyField':
-                    config_id = config.copy()
-                    config_id['name'] = config['name'] + '_ids'
-                    config_id['type'] = 'auto'
-                    result.append(config_id)
+                if isinstance(config, list):
+                #foreign key and m2m fields generates two configs: one - for keys field, another - for values field
+                    for item in config:
+                        append_field_metadata(field, mappings, configCls)
+                else:
+                    append_field_metadata(field, mappings, configCls)
 
             else:                    
                 raise RuntimeError, \
                     "Field class `%s` not found in extfields.py. Use `get_metadata` to resolve the field `%s`." % (klass, field.name)
             
-        result.append(config)
+            if isinstance(config, list):
+                for item in config:
+                    result.append(item)
+            else:
+                result.append(config)
         
-
     return result
+    
+
+def append_field_metadata(field, mappings, configcls):
+    if mappings.has_key(field.name):
+        config['mapping'] = unicode( field.name )
+        config['name'] = unicode( mappings[field.name]  )
+
+        if field.has_default():
+            if callable(field.default):
+                config['defaultValue'] =  configcls.getValue(field.default())
+            else:
+                config['defaultValue'] =  configcls.getValue(field.default )
     
 
