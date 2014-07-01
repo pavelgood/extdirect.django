@@ -21,6 +21,10 @@ from django import forms
 
 
 class Field(object):
+    """
+    Base class for all fields.
+    """
+
     WIDTH = 200
     COL_WIDTH = None
     TYPE = ''
@@ -28,7 +32,7 @@ class Field(object):
     def __init__(self, field):
         self.field = field  # django field
 
-    def getEditor(self, initialValue = False, data = {}):
+    def getEditor(self, initialValue=False, data={}):
         name = self.getName()
         label = name
 
@@ -38,35 +42,42 @@ class Field(object):
         # if not self.field.blank:
         # label += '*'
         conf = {
-            'xtype':'textfield'
-            ,'fieldLabel':label
-            ,'allowBlank':self.allowBlank()
-            ,'name':name
-            }
+            'xtype': 'textfield',
+            'fieldLabel': label,
+            'allowBlank': self.allowBlank(),
+            'name': name
+        }
+
         if getattr(self.field, 'initial', None):
             conf['value'] = unicode(self.field.initial)
+
         if initialValue:
             conf['value'] = self.getValue(initialValue)
+
         if getattr(self.field, 'help_text', None):
             conf['emptyText'] = unicode(getattr(self.field, 'help_text'))
+
         #conf['tooltip'] = unicode(getattr(self.field, 'help_text'))
         if getattr(self.field, 'max_length', None):
             pixels = self.field.max_length*5
-            if pixels<40:
-                pixels=40
-            if pixels>300:
-                pixels=300
+            if pixels < 40:
+                pixels = 40
+            if pixels > 300:
+                pixels = 300
             conf['width'] = pixels
+
         if self.WIDTH:
             conf['width'] = self.WIDTH
+
         # disable some fields : eg: autofields and auto datetimefields
         if not getattr(self.field, 'editable', True) or self.field.__class__.__name__ == 'AutoField':
             conf = {
-                'xtype':'hidden'
-                ,'disabled':True
-                ,'editable':False
-                ,'name':name
-                }
+                'xtype': 'hidden',
+                'disabled': True,
+                'editable': False,
+                'name': name
+            }
+
         conf.update(data)
         # if self.field.name in  .in _get_validation_exclusions
         return conf
@@ -81,29 +92,27 @@ class Field(object):
         return unicode(name)
 
     def allowBlank(self):
-        allow = True
         if isinstance(self.field, forms.Field):
-            allow = not(self.field.required)
+            allow = not self.field.required
         else:
             allow = self.field.blank
         return allow
 
     def getReaderConfig(self):
-        conf = {
-                'name': self.getName(),
-                'type': self.TYPE,
-                'allowBlank': self.allowBlank()
+        return {
+            'name': self.getName(),
+            'type': self.TYPE,
+            'allowBlank': self.allowBlank()
         }
-        return conf
 
     def getColumnConfig(self):
         conf = {
             'header': unicode(self.field.verbose_name),
             'tooltip': unicode(self.field.verbose_name),
-            'name':unicode(self.field.name),
+            'name': unicode(self.field.name),
             'sortable': True,
             'dataIndex': unicode(self.field.name),
-            'editor':self.getEditor()
+            'editor': self.getEditor()
         }
         if self.COL_WIDTH:
             conf['width'] = self.COL_WIDTH
@@ -125,7 +134,7 @@ class AutoField(Field):
 
     def getEditor(self, *args, **kwargs):
         conf = super(AutoField, self).getEditor(*args, **kwargs)
-        conf.update({'xtype':'hidden', 'editable':False} )
+        conf.update({'xtype': 'hidden', 'editable': False})
         return conf
 
     def getColumnConfig(self):
@@ -140,7 +149,7 @@ class EmailField(Field):
 
     def getEditor(self, *args, **kwargs):
         conf = super(EmailField, self).getEditor(*args, **kwargs)
-        conf.update({'xtype':'textfield', 'vtype':'email'} )
+        conf.update({'xtype': 'textfield', 'vtype': 'email'})
         return conf
 
 
@@ -150,7 +159,7 @@ class URLField(Field):
 
     def getEditor(self, *args, **kwargs):
         conf = super(URLField, self).getEditor(*args, **kwargs)
-        conf.update({'xtype':'textfield', 'vtype':'url'} )
+        conf.update({'xtype': 'textfield', 'vtype': 'url'})
         return conf
 
 
@@ -160,30 +169,31 @@ class CharField(Field):
     def getEditor(self, *args, **kwargs):
         conf = super(CharField, self).getEditor(*args, **kwargs)
         if getattr(self.field, 'choices', None):
-            choices =  {
-                'xtype':'awesomecombo'
-                ,'format':'string'
-                ,'displayField':'value'
-                ,'hiddenName':conf.get('name')
-                ,'valueField':'id'
-                ,'mode':'local'
-                ,'triggerAction':'all'
-                ,'editable':False
-                ,'forceSelection': True
-                ,'store':{
-                    'xtype':'simplestore'
-                    ,'fields':['id','value']
-                    ,'data':self.field.choices
+            choices = {
+                'xtype': 'awesomecombo',
+                'format': 'string',
+                'displayField': 'value',
+                'hiddenName': conf.get('name'),
+                'valueField': 'id',
+                'mode': 'local',
+                'triggerAction': 'all',
+                'editable': False,
+                'forceSelection': True,
+                'store': {
+                    'xtype': 'simplestore',
+                    'fields': ['id', 'value'],
+                    'data': self.field.choices
                 }
             }
-            conf.update(choices )
+            conf.update(choices)
         return conf
 
-        return {'xtype':'textfield'}
+        return {'xtype': 'textfield'}
 
 ChoiceField = CharField
 SlugField = CharField
 TextField = CharField
+
 
 class MultipleChoiceField(ChoiceField):
     
@@ -210,7 +220,7 @@ class DecimalField(Field):
 
     def getEditor(self, *args, **kwargs):
         conf = super(DecimalField, self).getEditor(*args, **kwargs)
-        conf.update({'xtype':'numberfield', 'style':'text-align:right', 'width':50} )
+        conf.update({'xtype': 'numberfield', 'style': 'text-align:right', 'width': 50})
         return conf
 
     def getReaderConfig(self):
@@ -251,7 +261,7 @@ class DateTimeField(Field):
 
     def getEditor(self, *args, **kwargs):
         conf = super(DateTimeField, self).getEditor(*args, **kwargs)
-        conf.update({'xtype':self.EDITOR_XTYPE, 'format':self.FORMAT} )
+        conf.update({'xtype': self.EDITOR_XTYPE, 'format': self.FORMAT})
         return conf
 
     def getReaderConfig(self):
@@ -285,7 +295,7 @@ class DateField(DateTimeField):
 
     def parseValue(self, value):
         if value:
-            if value.find('T')>0:
+            if value.find('T') > 0:
                 value = value.split('T')[0]
             value = datetime.datetime.strptime(value, self.FORMAT_PARSE).date()
         return value
@@ -301,7 +311,7 @@ class TimeField(DateTimeField):
 
     def parseValue(self, value):
         if value:
-            if value.find('T')>0:
+            if value.find('T') > 0:
                 value = value.split('T')[1]
             value = datetime.datetime.strptime(value, self.FORMAT_PARSE).time()
         return value
@@ -315,11 +325,14 @@ class BooleanField(Field):
 
     def getEditor(self, *args, **kwargs):
         conf = super(BooleanField, self).getEditor(*args, **kwargs)
-        conf.update({'xtype':'checkbox'} )
-        if kwargs.get('initialValue') == True:
-            conf.update({'checked':True} )
-        if getattr(self.field, 'initial', None) == True:
+        conf.update({'xtype': 'checkbox'})
+
+        if 'initialValue' in kwargs:
+            conf.update({'checked': True})
+
+        if hasattr(self.field, 'initial'):
             conf['checked'] = True
+
         return conf
 
     def getColumnConfig(self):
@@ -330,6 +343,7 @@ class BooleanField(Field):
     def getReaderConfig(self):
         conf = super(BooleanField, self).getReaderConfig()
         return conf
+
 
 class ForeignKey(Field):
 
@@ -371,23 +385,24 @@ class ForeignKey(Field):
         return value
 
     def parseFK(self, cls, value):
-        ''' translates FK or M2M values to instance list '''
+        """ Translates FK or M2M values to instance list """
 
         relateds = []
         if isinstance(value, list):
             for id in value:
-                if isinstance(id, dict) and id.has_key('id'):
+                if isinstance(id, dict) and 'id' in id:
                     item = cls.objects.get(pk=id['id'])
                 else:
                     item = cls.objects.get(pk=id)
                 relateds.append(item)
-        elif isinstance(value, dict) and value.has_key('id'):
+        elif isinstance(value, dict) and 'id' in value:
             relateds.append(cls.objects.get(pk=value['id']))
         else:
             relateds.append(cls.objects.get(pk=value))
         return relateds
 
 OneToOneField = ForeignKey
+
 
 class ModelChoiceField(ForeignKey):
 
@@ -418,9 +433,9 @@ class ManyToManyField(ForeignKey):
 
     def getReaderConfig(self):
         conf = {
-                'name': self.getName(),
-                'type': self.TYPE,
-                'allowBlank': self.allowBlank()
+            'name': self.getName(),
+            'type': self.TYPE,
+            'allowBlank': self.allowBlank()
         }
         conf_id = conf.copy()
         conf_id['name'] = conf.get('name') + '_ids'

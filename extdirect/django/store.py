@@ -1,9 +1,11 @@
 from django.core.serializers import serialize
 from django.core.paginator import Paginator, InvalidPage, EmptyPage
 from django.db import models
-from filter import QueryParser
 from django.db.models import Q
-from metadata import meta_fields, meta_columns
+
+from extdirect.django.filter import QueryParser
+from extdirect.django.metadata import meta_fields, meta_columns
+
 import operator
 
 
@@ -11,10 +13,10 @@ class ExtDirectStore(object):
     """
     Implement the server-side needed to load an Ext.data.DirectStore
     """
-    def __init__(self, model, extras=[], root='records', total='total', success='success', \
-                 message='message', start='start', limit='limit', sort='sort', dir='direction',\
-                 prop='property', id_property='id', filter='filter', pquery='query', \
-                 colModel=False, metadata=False, mappings={}, sort_info={}, custom_meta={}, fields=[], \
+    def __init__(self, model, extras=[], root='records', total='total', success='success',
+                 message='message', start='start', limit='limit', sort='sort', dir='direction',
+                 prop='property', id_property='id', filter='filter', pquery='query',
+                 metadata=False, mappings={}, sort_info={}, custom_meta={}, fields=[],
                  exclude_fields=[], extra_fields=[], get_metadata=None):
         
         self.model = model        
@@ -50,8 +52,9 @@ class ExtDirectStore(object):
         self.metadata = {}
         if self.showmetadata:      
         
-            fields = meta_fields(self.model, self.mappings, self.exclude_fields, self.get_metadata, fields=self.fields) + self.extra_fields
-            #print 'buildMetaData meta_fields', fields
+            fields = meta_fields(self.model, self.mappings, self.exclude_fields,
+                                 self.get_metadata, fields=self.fields) + self.extra_fields
+
             self.metadata = {
                 'idProperty': self.id_property,
                 'root': self.root,

@@ -1,12 +1,14 @@
-import doctest
-import unittest
-
+from extdirect.django import doctest
 from extdirect.django import ExtRemotingProvider, ExtPollingProvider
-remote_provider = ExtRemotingProvider(namespace='django', url='/remoting/router/')
-polling_provider = ExtPollingProvider(url='/polling/router/', event='some-event')
 
 from django.conf import settings
 from django.core.urlresolvers import clear_url_caches
+
+import unittest
+
+remote_provider = ExtRemotingProvider(namespace='django', url='/remoting/router/')
+polling_provider = ExtPollingProvider(url='/polling/router/', event='some-event')
+
 
 def setUp(self):    
     self._old_root_urlconf = settings.ROOT_URLCONF

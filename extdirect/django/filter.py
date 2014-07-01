@@ -61,9 +61,8 @@ class QueryParser:
             data = json.loads(data)
             result = self._parse_item(data)
         except ValueError:
-            print 'Value error: ', sys.exc_info()[1]
+            print('Value error: ', sys.exc_info()[1])
 
-        #print result.__str__()
         return result
 
     def _parse_item(self, data):

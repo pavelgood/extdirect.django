@@ -22,15 +22,11 @@ class ExtDirectStoreModel(models.Model):
 class MetaModel(models.Model):
     
     name = models.TextField(verbose_name="name", max_length=35)
-    
     nickname = models.TextField(verbose_name="nickname", max_length=35, blank=True, default="nick")
-    
     age = models.IntegerField(verbose_name="age")
-    
     creation_date = models.DateField(verbose_name="Creation")
-
-    
     fk_model = models.ForeignKey(FKModel, verbose_name="fk")
+
 
 class HandField(models.Field):
 
@@ -39,11 +35,13 @@ class HandField(models.Field):
     def __init__(self, *args, **kwargs):
         kwargs['max_length'] = 104
         super(HandField, self).__init__(*args, **kwargs)
-        
+
+
 class MetaModelCustomField(models.Model):
     
     hand = HandField()
-    
+
+
 #Auth tests
 class PermModel(models.Model):
     class Meta:

@@ -1,12 +1,12 @@
-from extdirect.django.store import ExtDirectStore
-
 from django.db import transaction
 from django.core.serializers import serialize
 from django.utils.encoding import force_unicode
 from django.db.models import fields
 from django.forms.models import ModelFormMetaclass, ModelForm
 
-import extfields
+from extdirect.django.store import ExtDirectStore
+from extdirect.django import extfields
+
 
 def format_form_errors(errors):
     """
@@ -19,6 +19,7 @@ def format_form_errors(errors):
         err[k] = [force_unicode(e) for e in v]
 
     return err
+
 
 class BaseExtDirectCRUD(object):
     """
@@ -49,10 +50,9 @@ class BaseExtDirectCRUD(object):
 
     #Seems that Ext.form.action.DirectLoad always look for this metadata.
     #If you find a way to change that on the client-side, please let me know.
-    direct_load_metadata = {'root': 'data', 'total' : 'total', 'success': 'success'}
+    direct_load_metadata = {'root': 'data', 'total': 'total', 'success': 'success'}
 
-
-    def __init__(self, provider, action, model, form = None):
+    def __init__(self, provider, action, model, form=None):
         #same as Django generic views
         self.model, self.form = self.get_model_and_form_class(model, form)
         self.store = self.direct_store()
@@ -92,7 +92,7 @@ class BaseExtDirectCRUD(object):
         provider.register(self.destroy, action, 'destroy', 1, False, login_required, permission)
 
     def direct_store(self):
-        return ExtDirectStore(self.model, metadata=self.metadata, colModel=self.colModel)
+        return ExtDirectStore(self.model, metadata=self.metadata)
 
     def query(self, **kw):
         #It must return `None` or a valid Django Queryset
@@ -142,25 +142,23 @@ class BaseExtDirectCRUD(object):
             self.post_single_create(request, c)
             return c.id, ""
         else:
-            print '_single_create FORM ERROR', format_form_errors(form.errors)
+            print('_single_create FORM ERROR', format_form_errors(form.errors))
             return 0, form.errors
 
     def _get_form(self):
         return self.form
 
     def _single_update(self, request, data):
-        id = data.pop("id")
-        obj = self.model.objects.get(pk=id)
+        obj = self.model.objects.get(pk=data.pop('id'))
         if self.parse_fk_fields:
             data = self._fk_fields_parser(data)
-
         form = self._get_form()(data, request.FILES, instance=obj)
         if form.is_valid():
             obj = form.save()
             self.post_single_update(request, obj)
-            return obj.id, ""
+            return obj.id, ''
         else:
-            print '_single_update FORM ERROR', format_form_errors(form.errors)
+            print('_single_update FORM ERROR', format_form_errors(form.errors))
             return 0, form.errors
 
     # Process of data in order to fix the foreign keys according to how
@@ -220,25 +218,27 @@ class BaseExtDirectCRUD(object):
         """
         if form_class:
             return form_class._meta.model, form_class
+
         if model:
             # The inner Meta class fails if model = model is used for some reason.
             tmp_model = model
+
             class Meta:
                 model = tmp_model
+
             class_name = model.__name__ + 'Form'
             form_class = ModelFormMetaclass(class_name, (ModelForm,), {'Meta': Meta})
             return model, form_class
-        #raise GenericViewError("Generic view must be called with either a model or"
-        #                   " form_class argument.")
-        print("Generic view must be called with either a model or form_class argument.")
+
+        raise GenericViewError('Generic view must be called with either a model or form_class argument.')
+
         return model, form_class
+
 
 class ExtDirectCRUD(BaseExtDirectCRUD):
     """
     ExtDirectCRUD main class.
-
     Implements the main CRUD actions.
-
     You shouldn't re-implement these methods, see
     BaseExtDirectCRUD if you need custom behavior.
     """
@@ -290,7 +290,7 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
             transaction.savepoint_commit(sid)
 
     #READ
-    def read(self, request, fields = None):
+    def read(self, request, fields=None):
         extdirect_data = self.extract_read_data(request)
         
         if extdirect_data.has_key('page'):
@@ -298,7 +298,7 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
 
         ok, msg = self.pre_read(extdirect_data)
         if ok:
-            return self.store.query(qs=self.query(**extdirect_data), fields = fields, **extdirect_data)
+            return self.store.query(qs=self.query(**extdirect_data), fields=fields, **extdirect_data)
         else:
             return self.failure(msg)
 
@@ -394,13 +394,13 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
 
 class ExtDirectCRUDComplex(ExtDirectCRUD):
     show_form_validation = True
-    def __removeUselessFields(self, data):
-        toremove = ['model','meta','fields']
-        for f in toremove:
-            if data.has_key(f):
-                data.pop( f )
-        return data
 
+    def __removeUselessFields(self, data):
+        toremove = ['model', 'meta', 'fields']
+        for f in toremove:
+            if f in data:
+                data.pop(f)
+        return data
 
     def extract_read_data(self, request):
         data = request.extdirect_post_data[0]
@@ -415,7 +415,9 @@ class ExtDirectCRUDComplex(ExtDirectCRUD):
             v = data[field]
             if field in self.model._meta.get_all_field_names():
                 f = self.model._meta.get_field(field)
-                if isinstance(f, fields.DateTimeField) or isinstance(f, fields.DateField) or isinstance(f, fields.TimeField):
+                if isinstance(f, fields.DateTimeField) \
+                        or isinstance(f, fields.DateField) \
+                        or isinstance(f, fields.TimeField):
                     c = getattr(extfields, f.__class__.__name__)(f)
                     data[field] = (c.parseValue(v))
                 elif isinstance(f, fields.URLField):
@@ -424,7 +426,7 @@ class ExtDirectCRUDComplex(ExtDirectCRUD):
                 elif isinstance(v, dict):
                     data[field] = v.get('id')
                 elif isinstance(v, list):
-                    data[field] = map(lambda a:a.get('id'), v)
+                    data[field] = map(lambda a: a.get('id'), v)
         return data
 
     def extract_update_data(self, request, sid):
@@ -441,23 +443,16 @@ class ExtDirectCRUDComplex(ExtDirectCRUD):
             data = self.__removeUselessFields(data)[self.store.root]
             return data
 
-
     def read(self, request):
         data = request.extdirect_post_data[0]
         fields = data.get('fields', None)
         if fields:
             self.store.fields = fields
-        res = super(ExtDirectCRUDComplex, self).read(request, fields = fields)
-        return res
-
-
+        return super(ExtDirectCRUDComplex, self).read(request, fields=fields)
 
     def extract_destroy_data(self, request):
         #It must return the id or list of id's to be deleted.
-        data =  request.extdirect_post_data[0]
+        data = request.extdirect_post_data[0]
         data = data[self.store.root]
         data = data.get('id')
         return data
-
-
-

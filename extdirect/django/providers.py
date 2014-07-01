@@ -1,22 +1,22 @@
-import sys, traceback
+import sys
+import traceback
+import json
 
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.conf import settings
 from django import forms
 
-from extserializer import jsonDumpStripped
+from extdirect.django import extforms
+from extdirect.django.extserializer import jsonDumpStripped
+from extdirect.django.crud import ExtDirectCRUDComplex, format_form_errors
 
-import json as json
-
-import extforms
-
-from crud import ExtDirectCRUDComplex, format_form_errors
 
 SCRIPT = """
 Ext.onReady(function() {
     Ext.Direct.addProvider(%s);
 });
 """
+
 
 class ExtDirectProvider(object):
     """
@@ -77,9 +77,10 @@ class ExtDirectProvider(object):
             )
         """
         config = jsonDumpStripped(self._config)
-        js =  SCRIPT % config
+        js = SCRIPT % config
 
         return HttpResponse(js, mimetype='text/javascript')
+
 
 class ExtRemotingProvider(ExtDirectProvider):
     """
@@ -95,12 +96,11 @@ class ExtRemotingProvider(ExtDirectProvider):
         self.actions = {}
         self.descriptor = descriptor
 
-
     def api(self, request):
         conf = self._config
         descriptor = self.namespace + '.' + self.descriptor
 
-        if request.GET.has_key('format') and request.GET['format'] == 'json':
+        if 'format' in request.GET and request.GET['format'] == 'json':
             conf['descriptor'] = descriptor
             mimetype = 'application/json'
             response = jsonDumpStripped(conf)
@@ -134,8 +134,7 @@ Ext.ns('%s');
 
         return config
 
-
-    def registerCRUD(self, cls,  action = None, app = None ):
+    def registerCRUD(self, cls,  action=None, app=None):
         # register CRUD actions for specified cls model
         # the default ExtDirect action will be 'app_label_model_name'
 
@@ -149,16 +148,16 @@ Ext.ns('%s');
             app = cls._meta.app_label
         if not action:
             action = '%s_%s' % (app, cls.__name__)
-        item.register_actions(self, action , False, None)
+        item.register_actions(self, action, False, None)
         return item
 
-    def registerForm(self, formCls,  action = None, name = None, success = None):
+    def registerForm(self, formCls,  action=None, name=None, success=None):
         # register submit action for forms
         if not action:
             action = 'forms_%s' % formCls.__name__
 
         def load(request):
-            return {'ok':True}
+            return {'ok': True}
 
         def submit(request):
             data = request.POST.copy()
@@ -170,35 +169,34 @@ Ext.ns('%s');
             if c.is_valid():
                 if success and callable(success):
                     success(request, c)
-                return {'success':True}
+                return {'success': True}
             else:
-                return {'success':False, 'errors':format_form_errors(c.errors) }
+                return {'success': False, 'errors': format_form_errors(c.errors)}
 
         def getFields(request):
             c = formCls()
-            helper = extforms.Form(formInstance = c)
-            extfieldsConfig = helper.getFieldsConfig()
-            return {'fields':extfieldsConfig}
+            helper = extforms.Form(formInstance=c)
+            extfields_config = helper.getFieldsConfig()
+            return {'fields': extfields_config}
 
-        self.register(load, action = action, name = 'load', form_handler = False)
-        self.register(getFields, action = action, name = 'getFields', len=0, form_handler = False)
-        self.register(submit, action = action, name = 'submit', len=0, form_handler = True)
+        self.register(load, action=action, name='load', form_handler=False)
+        self.register(getFields, action=action, name='getFields', length=0, form_handler=False)
+        self.register(submit, action=action, name='submit', length=0, form_handler=True)
 
-
-    def register(self, method, action=None, name=None, len=0, form_handler=False, \
+    def register(self, method, action=None, name=None, length=0, form_handler=False,
                  login_required=False, permission=None):
 
         if not action:
             action = method.__module__.replace('.', '_')
 
-        if not self.actions.has_key(action):
+        if not action in self.actions:
             #first time
             self.actions[action] = {}
 
         #if name it's None, we use the real function name.
         name = name or method.__name__
         self.actions[action][name] = dict(func=method,
-                                          len=len,
+                                          len=length,
                                           form_handler=form_handler,
                                           login_required=login_required,
                                           permission=permission)
@@ -228,15 +226,18 @@ Ext.ns('%s');
 
         #Checks for login or permissions required
         login_required = self.actions[action][method]['login_required']
-        if(login_required):
+
+        if login_required:
             if not request.user.is_authenticated():
                 response['result'] = dict(success=False, message='You must be authenticated to run this method.')
                 return response
 
         permission = self.actions[action][method]['permission']
-        if(permission):
+
+        if permission:
             if not request.user.has_perm(permission):
-                response['result'] = dict(success=False, messsage='You need `%s` permission to run this method' % permission)
+                response['result'] = dict(success=False,
+                                          messsage='You need `%s` permission to run this method' % permission)
                 return response
         if data:
             #this is a simple hack to convert all the dictionaries keys
@@ -264,7 +265,7 @@ Ext.ns('%s');
         #finally, call the function passing the `request`
         try:
             response['result'] = func(request)
-        except Exception, e:
+        except Exception as e:
             if settings.DEBUG:
                 etype, evalue, etb = sys.exc_info()
                 response['type'] = 'exception'
@@ -276,24 +277,23 @@ Ext.ns('%s');
 
         return response
 
-
     def router(self, request):
         """
         Check if the request came from a Form POST and call
         the dispatcher for every ExtDirect request recieved.
         """
 
-        if request.POST.has_key('extAction'):
+        if 'extAction' in request.POST:
 
             extdirect_request = dict(
-                action = request.POST['extAction'],
-                method = request.POST['extMethod'],
-                tid = request.POST['extTID'],
-                type = request.POST['extType'],
-                isForm = True
+                action=request.POST['extAction'],
+                method=request.POST['extMethod'],
+                tid=request.POST['extTID'],
+                type=request.POST['extType'],
+                isForm=True
             )
-        elif request.body:
 
+        elif request.body:
             extdirect_request = json.loads(request.body)
 
         else:
@@ -307,7 +307,7 @@ Ext.ns('%s');
 
         elif isinstance(extdirect_request, dict):
            #single call
-           response = self.dispatcher(request, extdirect_request)
+            response = self.dispatcher(request, extdirect_request)
 
         if request.POST.get('extUpload', False):
             #http://www.extjs.com/deploy/dev/docs/?class=Ext.form.BasicForm#Ext.form.BasicForm-fileUpload
@@ -350,14 +350,14 @@ class ExtPollingProvider(ExtDirectProvider):
     def router(self, request):
         response = {}
 
-        if(self.login_required):
+        if self.login_required:
             if not request.user.is_authenticated():
                 response['type'] = 'event'
                 response['data'] = 'You must be authenticated to run this method.'
                 response['name'] = self.event
                 return HttpResponse(jsonDumpStripped(response), mimetype='application/json')
 
-        if(self.permission):
+        if self.permission:
             if not request.user.has_perm(self.permission):
                 response['type'] = 'result'
                 response['data'] = 'You need `%s` permission to run this method' % self.permission
@@ -372,7 +372,7 @@ class ExtPollingProvider(ExtDirectProvider):
             else:
                 raise RuntimeError("The server provider didn't register a function to run yet")
 
-        except Exception, e:
+        except Exception as e:
             if settings.DEBUG:
                 etype, evalue, etb = sys.exc_info()
                 response['type'] = 'exception'

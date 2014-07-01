@@ -1,12 +1,12 @@
 from extdirect.django.serializer import Serializer as extdirectSerializer
 
+from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.encoding import smart_unicode
 from django.utils import simplejson
 from django.db import models
 
 import re
-
-from django.core.serializers.json import DjangoJSONEncoder
+import json
 
 
 class Serializer(extdirectSerializer):
@@ -51,8 +51,7 @@ class Serializer(extdirectSerializer):
 
 
 def jsonDump(obj):
-    return simplejson.dumps(obj, cls=DjangoJSONEncoder, ensure_ascii=False,
-        indent=4)
+    return json.dumps(obj, cls=DjangoJSONEncoder, ensure_ascii=False, indent=4)
 
 def jsonDumpStripped(inDict):
     ''' strip some specials values for ExtJs in the simplejson dump '''

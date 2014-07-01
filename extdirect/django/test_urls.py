@@ -1,5 +1,5 @@
 from django.conf.urls.defaults import *
-import tests
+from extdirect.django import tests
 
 urlpatterns = patterns(
     '',

@@ -1,35 +1,32 @@
 
 from django import forms
 from django.db import models
-
-
-import extfields
+from extdirect.django import extfields
 
 # conversion for some django forms field types
 FormField_to_ModelField = {
-     'TypedChoiceField':'CharField'
-
+    'TypedChoiceField': 'CharField'
 }
+
+
 def model_to_modelform(model):
-    meta = type('Meta', (), { "model":model, })
+    meta = type('Meta', (), {"model": model})
     modelform_class = type('modelform', (forms.ModelForm,), {"Meta": meta})
     return modelform_class
 
 
 class Form(object):
 
-    def __init__(self, formInstance = None, fields = []):
+    def __init__(self, formInstance=None, fields=[]):
         self.form = formInstance or forms.Form()
         self.fields = fields        # list of fields to display
         self.data = {}
 
-
-    def getConfig(self, initialData = False):
-        form_fields = self.getFieldsConfig(initialData = initialData)
+    def getConfig(self, initialData=False):
+        form_fields = self.getFieldsConfig(initialData=initialData)
         conf = {
-            'xtype':'form'
-            ,'items':form_fields
-
+            'xtype': 'form',
+            'items': form_fields
         }
         return conf
 
@@ -44,16 +41,17 @@ class Form(object):
         for name, item in self.getFieldList().items():
             cls = item.__class__.__name__
             cls = FormField_to_ModelField.get(cls, cls)
-            extField = getattr(extfields, cls)( item )
-            editor = extField.getEditor(initialValue = (initialData and self.getFieldValue(item.name)), data = {'name':name} )
+            extField = getattr(extfields, cls)(item)
+            editor = extField.getEditor(initialValue=(initialData and self.getFieldValue(item.name)),
+                                        data={'name': name})
             if editor:
-
-                conf.append( editor )
+                conf.append(editor)
         return conf
 
+
 class ModelForm(Form):
-    def __init__(self, modelCls, fields = []):
-        self.form = model_to_modelform( modelCls )()
+    def __init__(self, modelCls, fields=[]):
+        self.form = model_to_modelform(modelCls)()
         self.instance = None
 
         self.baseFields = self.form._meta.model._meta.fields + self.form._meta.model._meta.many_to_many
@@ -68,9 +66,9 @@ class ModelForm(Form):
             if val:
                 # special case for related fields serialisation
                 if isinstance(val, models.Model):
-                    return {'id':val.pk, '__unicode__':str(val)}
-                elif getattr(val, '__dict__', None) and val.__dict__.has_key('model'):
-                    return [{'id':i.pk, '__unicode__':str(i)} for i in val.all()]
+                    return {'id': val.pk, '__unicode__': str(val)}
+                elif getattr(val, '__dict__', None) and 'model' in val.__dict__:
+                    return [{'id': i.pk, '__unicode__': str(i)} for i in val.all()]
                 return val
         return None
 
@@ -78,9 +76,9 @@ class ModelForm(Form):
         self.instance = instance
 
     def getConfig(self, initialData = True):
-        conf = super(ModelForm, self).getConfig(initialData = initialData)
+        conf = super(ModelForm, self).getConfig(initialData=initialData)
         conf.update({
-            'api':{
+            'api': {
                 'load': 'django.ModelForm.load',
                 'submit': 'django.ModelForm.submit'
             }
@@ -94,6 +92,3 @@ class ModelForm(Form):
             if item.name in self.fields:
                 tlist.append(item)
         return tlist
-
-
-
