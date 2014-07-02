@@ -94,7 +94,7 @@ class BaseExtDirectCRUD(object):
     def direct_store(self):
         return ExtDirectStore(self.model, metadata=self.metadata)
 
-    def query(self, **kw):
+    def query(self, request, **kw):
         #It must return `None` or a valid Django Queryset
         return None
 
@@ -293,12 +293,12 @@ class ExtDirectCRUD(BaseExtDirectCRUD):
     def read(self, request, fields=None):
         extdirect_data = self.extract_read_data(request)
         
-        if extdirect_data.has_key('page'):
+        if 'page' in extdirect_data:
             extdirect_data.pop('page')
 
         ok, msg = self.pre_read(extdirect_data)
         if ok:
-            return self.store.query(qs=self.query(**extdirect_data), fields=fields, **extdirect_data)
+            return self.store.query(qs=self.query(request, **extdirect_data), fields=fields, **extdirect_data)
         else:
             return self.failure(msg)
 
