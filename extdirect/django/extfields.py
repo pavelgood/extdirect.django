@@ -250,7 +250,7 @@ FloatField = DecimalField
 
 
 class DateTimeField(Field):
-    FORMAT = 'Y-m-d H:i:s'
+    FORMAT = 'c' # ISO 8601 date (from ExtJS4.2 doc)
     FORMAT_RENDERER = 'Y-m-d H:i'
     EDITOR_XTYPE = 'datefield'
     FORMAT_PARSE = '%Y-%m-%dT%H:%M:%S'
