@@ -77,7 +77,7 @@ class ExtDirectStore(object):
         sort_field  = 'id'
         sort_dir    = 'DESC'
 
-        kw, qfilters = self.filter_handler(kw)
+        kw, qfilters = self.filter_handler(**kw)
 
         if self.start in kw and self.limit in kw:
             start = kw.pop(self.start)
@@ -146,7 +146,7 @@ class ExtDirectStore(object):
              
         return res
 
-    def filter_handler(self, kw):
+    def filter_handler(self, **kw):
         """
         Handles the `filter` and 'query' keys.
         """
@@ -159,20 +159,20 @@ class ExtDirectStore(object):
                 for item in f:
                     if self.property in item and self.value in item:
                         if item[self.property] == self.queryfilter:
-                            return kw, self.query_filter.parse(item[self.value])
+                            return kw, self.query_filter.parse(item[self.value], **kw)
                         else:
                             prop = item[self.property]
                             return kw, Q((prop, item[self.value]))
             elif self.property in f and self.value in f:
                 if f[self.property] == self.queryfilter:
-                    return kw, self.query_filter.parse(f[self.value])
+                    return kw, self.query_filter.parse(f[self.value], **kw)
                 else:
                     prop = f[self.property]
                     return kw, Q((prop, f[self.value]))
         return kw, Q()
 
     #TODO: remove this method and 'query' key handler, use 'filter' key only
-    def query_handler(self, kw):
+    def query_handler(self, **kw):
         """
         Handles the `query` key.
         """

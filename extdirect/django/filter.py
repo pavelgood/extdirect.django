@@ -51,24 +51,24 @@ class QueryParser:
     def __init__(self, model):
         self.model = model
 
-    def parse(self, data):
+    def parse(self, data, **kw):
         """
-        Deserialize json string to python object and parse it.
-        Return Q-object.
+        Deserializes json string to python object and parses it.
+        Returns Q-object.
         """
         result = Q()
         try:
             data = json.loads(data)
-            result = self._parse_item(data)
-        except ValueError:
-            print('Value error: ', sys.exc_info()[1])
+            result = self._parse_item(data, **kw)
+        except ValueError as e:
+            print(e)
 
         return result
 
-    def _parse_item(self, data):
+    def _parse_item(self, data, **kw):
         """
-        Parse filter item: { element: expression }
-        Return Q-object.
+        Parses filter item: { element: expression }
+        Returns Q-object.
         """
         if not isinstance(data, dict):
             return Q()
@@ -77,16 +77,16 @@ class QueryParser:
         key = data.keys()[0]
         if key[0] == '$':
             if key in self.logical:
-                return self._parse_logical(key, data.pop(key))
+                return self._parse_logical(key, data.pop(key), **kw)
             else:
                 raise ValueError("Unsupported logical operation %s" % key)
         else:
-            return self._parse_field(key, data[key])
+            return self._parse_field(key, data[key], **kw)
 
-    def _parse_logical(self, key, data):
+    def _parse_logical(self, key, data, **kw):
         """
-        Parse block with logical operation.
-        Return Q-object.
+        Parses block with logical operation.
+        Returns Q-object.
         """
         if key == self._and:
             if not isinstance(data, list):
@@ -94,7 +94,7 @@ class QueryParser:
                 return Q()
             qf = list()
             for item in data:
-                obj = self._parse_item(item)
+                obj = self._parse_item(item, **kw)
                 if len(obj) > 0:
                     qf.append(obj)
             if len(qf) > 0:
@@ -106,14 +106,14 @@ class QueryParser:
                 return Q()
             qf = list()
             for item in data:
-                obj = self._parse_item(item)
+                obj = self._parse_item(item, **kw)
                 if len(obj) > 0:
                     qf.append(obj)
             if len(qf) > 0:
                 return reduce(operator.or_, qf)
             return Q()
         elif key == self._not:
-            obj = self._parse_item(data)
+            obj = self._parse_item(data, **kw)
             if len(obj) > 0:
                 return ~obj
         else:
@@ -122,13 +122,13 @@ class QueryParser:
 
     def _parse_comparision(self, field, key, data):
         """
-        Return string value.
+        Returns string value.
         """
         return data
 
-    def _parse_field(self, field, value):
+    def _parse_field(self, field, value, **kw):
         """
-        Return Q-object.
+        Returns Q-object.
         field - field name
         value - field value or expression
         """
