@@ -151,7 +151,7 @@ class ExtDirectStore(object):
         Handles the `filter` and 'query' keys.
         """
         if self.pquery in kw:
-            return self.query_handler(kw)
+            return self.query_handler(**kw)
 
         if self.filter in kw:
             f = kw.pop(self.filter)
