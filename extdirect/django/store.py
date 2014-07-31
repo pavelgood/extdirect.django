@@ -124,9 +124,9 @@ class ExtDirectStore(object):
             
             objects = page.object_list
             
-        return self.serialize(objects, metadata, colModel, total, fields=fields)
+        return self.serialize(objects, metadata, colModel, total, fields=fields, **kw)
         
-    def serialize(self, queryset, metadata=True, colModel=False, total=None, fields=None):
+    def serialize(self, queryset, metadata=True, colModel=False, total=None, fields=None, **kw):
         meta = {
             'root': self.root,
             'total': self.total,
@@ -134,7 +134,7 @@ class ExtDirectStore(object):
             'idProperty': self.id_property
         }        
         res = serialize('extdirect', queryset, meta=meta, extras=self.extras,
-                        total=total, exclude_fields=self.exclude_fields)
+                        total=total, exclude_fields=self.exclude_fields, **kw)
         
         self.buildMetaData()
         if metadata and self.metadata:            
