@@ -43,14 +43,15 @@ class ExtDirectStore(object):
         self.custom_meta = custom_meta
         self.showmetadata = metadata
         self.metadata = {}
-        self.buildMetaData()
         self.queryfilter = 'queryfilter'
         self.value = 'value'
         self.query_filter = QueryParser(self.model)
         
-    def buildMetaData(self):
+    def build_meta_data(self, optional=None):
+
         self.metadata = {}
-        if self.showmetadata:      
+
+        if self.showmetadata:
         
             fields = meta_fields(self.model, self.mappings, self.exclude_fields,
                                  self.get_metadata, fields=self.fields) + self.extra_fields
@@ -68,16 +69,15 @@ class ExtDirectStore(object):
            
             self.metadata.update(self.custom_meta)  
 
-    def query(self, qs=None, metadata=True, colModel=False, fields=None, **kw):
+    def query(self, qs=None, metadata=True, col_model=False, fields=None, optional=None, **kw):
         """
         Filter objects and return serialized bundle.
         """
-        paginate    = False
-        total       = None
-        sort_field  = 'id'
-        sort_dir    = 'DESC'
+        paginate = False
+        sort_field = 'id'
+        sort_dir = 'DESC'
 
-        kw, qfilters = self.filter_handler(**kw)
+        kw, qfilters = self.filter_handler(optional=optional, **kw)
 
         if self.start in kw and self.limit in kw:
             start = kw.pop(self.start)
@@ -124,29 +124,32 @@ class ExtDirectStore(object):
             
             objects = page.object_list
             
-        return self.serialize(objects, metadata, colModel, total, fields=fields, **kw)
+        return self.serialize(objects, metadata, col_model, total, fields=fields, optional=optional)
         
-    def serialize(self, queryset, metadata=True, colModel=False, total=None, fields=None, **kw):
+    def serialize(self, queryset, metadata=True, col_model=False, total=None, fields=None, optional=None):
+
         meta = {
             'root': self.root,
             'total': self.total,
             'success': self.success,
             'idProperty': self.id_property
         }        
+
         res = serialize('extdirect', queryset, meta=meta, extras=self.extras,
-                        total=total, exclude_fields=self.exclude_fields, **kw)
-        
-        self.buildMetaData()
+                        total=total, exclude_fields=self.exclude_fields, optional=optional)
+
+        self.build_meta_data(optional=optional)
+
         if metadata and self.metadata:            
             
             res['metaData'] = self.metadata     
             # also include columns for grids
-            if colModel:    
+            if col_model:
                 res['columns'] = meta_columns(self.model, fields=fields)
              
         return res
 
-    def filter_handler(self, **kw):
+    def filter_handler(self, optional=None, **kw):
         """
         Handles the `filter` and 'query' keys.
         """
@@ -159,13 +162,13 @@ class ExtDirectStore(object):
                 for item in f:
                     if self.property in item and self.value in item:
                         if item[self.property] == self.queryfilter:
-                            return kw, self.query_filter.parse(item[self.value], **kw)
+                            return kw, self.query_filter.parse(item[self.value], optional=optional)
                         else:
                             prop = item[self.property]
                             return kw, Q((prop, item[self.value]))
             elif self.property in f and self.value in f:
                 if f[self.property] == self.queryfilter:
-                    return kw, self.query_filter.parse(f[self.value], **kw)
+                    return kw, self.query_filter.parse(f[self.value], optional=optional)
                 else:
                     prop = f[self.property]
                     return kw, Q((prop, f[self.value]))

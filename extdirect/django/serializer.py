@@ -1,6 +1,5 @@
 from django.core.serializers import python
 from django.utils.encoding import smart_unicode
-
 from io import StringIO
 
 

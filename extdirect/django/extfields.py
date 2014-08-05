@@ -372,6 +372,7 @@ class ForeignKey(Field):
     def getReaderConfig(self):
         # generates tow config groups: with int type for ids and with string type for values
         conf = super(ForeignKey, self).getReaderConfig()
+        conf.update({'useNull': True})
         conf_id = conf.copy()
         conf_id['name'] = conf.get('name') + '_id'
         conf.update({'type': 'string'})
