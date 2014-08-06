@@ -35,6 +35,7 @@ class ExtDirectStore(object):
         self.dir = dir
         self.property = prop
         self.filter = filter
+        #pquery has higher priority then queryfilter
         self.pquery = pquery
         self.fields = fields
         self.get_metadata = get_metadata
@@ -154,7 +155,7 @@ class ExtDirectStore(object):
         Handles the `filter` and 'query' keys.
         """
         if self.pquery in kw:
-            return self.query_handler(**kw)
+            return self.query_handler(optional, **kw)
 
         if self.filter in kw:
             f = kw.pop(self.filter)
@@ -174,25 +175,26 @@ class ExtDirectStore(object):
                     return kw, Q((prop, f[self.value]))
         return kw, Q()
 
-    #TODO: remove this method and 'query' key handler, use 'filter' key only
-    def query_handler(self, **kw):
+    def query_handler(self, optional, **kw):
         """
         Handles the `query` key.
         """
-        qf = ()
-        if self.pquery in kw:
-            if self.limit in kw:
-                kw.pop(self.limit)
-            kw.__setitem__(self.start, 0)
-            template = kw.pop(self.pquery)
-            fields = self.model._meta.fields
-            f = []
-            for field in fields:
-                keyword = field.name + '__icontains'
-                if field.name == 'id':
-                    continue
-                if isinstance(field, models.ForeignKey):
-                    continue
-                f.append(Q((keyword, template)))
-            qf = reduce(operator.or_, f)
-        return kw, qf
+        if not self.pquery in kw:
+            return kw, ()
+        #if self.limit in kw:
+        #    kw.pop(self.limit)
+        #kw.__setitem__(self.start, 0)
+        template = kw.pop(self.pquery)
+        fields = self.model._meta.fields
+        conditions = []
+
+        for field in fields:
+            if field.name == 'id':
+                continue
+            if isinstance(field, models.ForeignKey):
+                continue
+            conditions.append('{"%s":{"$icontains": "%s"}}' % (field.name, template))
+
+        expression = '{"$or":[%s]}' % ','.join(conditions)
+
+        return kw, self.query_filter.parse(expression, optional=optional)
