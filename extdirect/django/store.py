@@ -103,7 +103,7 @@ class ExtDirectStore(object):
         if len(qfilters):
             queryset = queryset.filter(qfilters)
         else:
-            queryset = queryset.filter()
+            queryset = queryset.all()
 
         if not sort_field is None:
             if sort_dir == 'DESC':

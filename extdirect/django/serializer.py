@@ -44,6 +44,12 @@ class Serializer(python.Serializer):
                 self._current[field.name] = smart_unicode(getattr(related, field.rel.field_name), strings_only=True)
                 self._current[field.name + '_id'] = self._current[field.name]
 
+    def handle_m2m_field_through(self, obj, field):
+        """
+        You might want to handle m2m fields which use custom model (through parameter).
+        """
+        pass
+
     def handle_m2m_field(self, obj, field):
         if field.rel.through._meta.auto_created:
             if self.use_natural_keys and hasattr(field.rel.to, 'natural_key'):
@@ -60,6 +66,8 @@ class Serializer(python.Serializer):
 
             self._current[field.name + '_ids'] = list_ids
             self._current[field.name] = list_val
+        else:
+            self.handle_m2m_field_through(obj, field)
 
     def serialize(self, queryset, **options):
         """
