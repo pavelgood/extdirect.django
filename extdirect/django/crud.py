@@ -134,7 +134,12 @@ class BaseExtDirectCRUD(object):
 
     def extract_destroy_data(self, request):
         #It must return the id or list of id's to be deleted.
-        return request.extdirect_post_data[0][self.store.root], self.extract_optional_data(request)
+        data = request.extdirect_post_data[0][self.store.root]
+        if isinstance(data, list):
+            ids = [item.get('id') for item in data]
+        else:
+            ids = data.get('id')
+        return ids, self.extract_optional_data(request)
 
     def _single_create(self, request, data, optional_data):
         #id='ext-record-#'
@@ -459,10 +464,3 @@ class ExtDirectCRUDComplex(ExtDirectCRUD):
         if fields:
             self.store.fields = fields
         return super(ExtDirectCRUDComplex, self).read(request, fields=fields)
-
-    def extract_destroy_data(self, request):
-        #It must return the id or list of id's to be deleted.
-        data = request.extdirect_post_data[0]
-        data = data[self.store.root]
-        data = data.get('id')
-        return data
